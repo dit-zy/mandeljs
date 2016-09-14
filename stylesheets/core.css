@@ -5,3 +5,31 @@
 #main_canvas {
     width: 100%;
 }
+
+.buttons-outer {
+    width: 100%;
+}
+
+.buttons-inner {
+    display: block;
+    margin: auto;
+}
+
+.btn {
+    background: url('../images/button-bg.png');
+    color: #ffffff;
+    display: inline-block;
+    font-family: 'Open Sans', Myriad, Calibri, sans-serif;
+    font-size: 1.3em;
+    font-weight: 800;
+    height: 40px;
+    margin: 0px 10px;
+    padding-top: 10px;
+    text-align: center;
+    text-decoration: none;
+    width: 160px;
+}
+
+.btn:hover {
+    text-decoration: none;
+}
