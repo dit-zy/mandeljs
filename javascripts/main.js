@@ -10,8 +10,32 @@ function Start() {
     mc.width = width;
     mc.height = width;
 
-    state.canvasWidth = width;
-    state.canvasHeight = width;
+    Reset();
+
+    // console.log(state);
+
+    mc_selector.click(Zoom);
+
+    window.onkeypress = function (e) {
+        if(e.key === 'r') {
+            Reset();
+            QueueDraw();
+        }
+    };
+
+    QueueDraw();
+}
+
+function QueueDraw() {
+    window.requestAnimationFrame(Draw);
+}
+
+function Reset() {
+
+    let mc = $('#main_canvas').get(0);
+
+    state.canvasWidth = mc.width;
+    state.canvasHeight = mc.height;
 
     state.ctx = mc.getContext('2d');
 
@@ -24,15 +48,11 @@ function Start() {
     state.height = state.width * state.canvasHeight / state.canvasWidth;
     state.resolution = 8;
     state.first = true;
-
-    // console.log(state);
-
-    mc_selector.click(Zoom);
-
-    window.requestAnimationFrame(Draw);
 }
 
 function Draw() {
+
+    // let start = (new Date()).getTime();
 
     let ctx = state.ctx;
 
@@ -65,22 +85,31 @@ function Draw() {
                     iterations++;
                 }
 
-                let color = 0;
+                let color = '#000000';
                 if(iterations < 1000) {
-                    color = Math.abs((iterations % 32) - 16) * 256 / 16;
+                    color = 'hsl(' + (190 + iterations * 360 / 32) + ', 50%, 50%)';
                 }
-                ctx.fillStyle = 'rgb(' + color + ',' + color + ',' + color + ')';
+                ctx.fillStyle = color;
                 ctx.fillRect(i * state.resolution, j * state.resolution, state.resolution, state.resolution);
             }
         }
     }
 
+    // let time = ((new Date()).getTime() - start) / 1000;
+    // let pixels = state.canvasWidth * state.canvasHeight / Math.pow(state.resolution, 2)
+    // console.log({
+    //     'time': time,
+    //     'pixels': pixels,
+    //     'per_second': pixels / time
+    // });
+
     state.first = false;
 
     if(1 < state.resolution) {
         state.resolution /= 2;
-        window.requestAnimationFrame(Draw);
+        QueueDraw();
     }
+
 }
 
 function Zoom(e) {
@@ -102,5 +131,5 @@ function Zoom(e) {
     state.resolution = 8;
     state.first = true;
 
-    window.requestAnimationFrame(Draw);
+    QueueDraw();
 }
