@@ -1,3 +1,5 @@
+const LOG_2 = Math.log(2);
+
 let state = {};
 
 function Start() {
@@ -11,6 +13,7 @@ function Start() {
     mc.height = width;
 
     Reset();
+    state.smooth = false;
 
     // console.log(state);
 
@@ -19,6 +22,9 @@ function Start() {
     window.onkeypress = function (e) {
         if(e.key === 'r') {
             Reset();
+            QueueDraw();
+        } else if(e.key === 's') {
+            Smooth();
             QueueDraw();
         }
     };
@@ -46,6 +52,12 @@ function Reset() {
     state.origin_y = 0;
     state.width = 4.0;
     state.height = state.width * state.canvasHeight / state.canvasWidth;
+    state.resolution = 8;
+    state.first = true;
+}
+
+function Smooth() {
+    state.smooth = !state.smooth;
     state.resolution = 8;
     state.first = true;
 }
@@ -85,9 +97,21 @@ function Draw() {
                     iterations++;
                 }
 
+                for(let k = 0; k < 3; k++) {
+                    let n_a = a*a - b*b + c;
+                    let n_b = 2*a*b + d;
+
+                    a = n_a;
+                    b = n_b;
+                }
+
                 let color = '#000000';
                 if(iterations < 1000) {
-                    color = 'hsl(' + (190 + iterations * 360 / 32) + ', 50%, 50%)';
+                    let h = iterations;
+                    if(state.smooth) {
+                        h = iterations + 3 - (Math.log(Math.log(Math.sqrt(a*a + b*b)))/LOG_2);
+                    }
+                    color = 'hsl(' + (250 - h * 360 / 32) + ', 50%, 50%)';
                 }
                 ctx.fillStyle = color;
                 ctx.fillRect(i * state.resolution, j * state.resolution, state.resolution, state.resolution);
