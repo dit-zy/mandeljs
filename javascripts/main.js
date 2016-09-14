@@ -97,12 +97,15 @@ function Draw() {
                     iterations++;
                 }
 
-                for(let k = 0; k < 3; k++) {
-                    let n_a = a*a - b*b + c;
-                    let n_b = 2*a*b + d;
+                // If smooth coloring is enabled then iterate a few more times to give a better result
+                if(state.smooth) {
+                    for(let k = 0; k < 3; k++) {
+                        let n_a = a*a - b*b + c;
+                        let n_b = 2*a*b + d;
 
-                    a = n_a;
-                    b = n_b;
+                        a = n_a;
+                        b = n_b;
+                    }
                 }
 
                 let color = '#000000';
@@ -111,7 +114,7 @@ function Draw() {
                     if(state.smooth) {
                         h = iterations + 3 - (Math.log(Math.log(Math.sqrt(a*a + b*b)))/LOG_2);
                     }
-                    color = 'hsl(' + (250 - h * 360 / 32) + ', 50%, 50%)';
+                    color = 'hsl(' + (180 + h * 360 / 32) + ', 50%, 50%)';
                 }
                 ctx.fillStyle = color;
                 ctx.fillRect(i * state.resolution, j * state.resolution, state.resolution, state.resolution);
