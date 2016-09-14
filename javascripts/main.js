@@ -1,6 +1,9 @@
 const LOG_2 = Math.log(2);
+const START_SIZE = 64;
+const ITERATIONS_PER_FRAME = 500;
 
 let state = {};
+let last_animation_request = 0;
 
 function Start() {
 
@@ -33,7 +36,7 @@ function Start() {
 }
 
 function QueueDraw() {
-    window.requestAnimationFrame(Draw);
+    last_animation_request = window.requestAnimationFrame(Draw);
 }
 
 function Reset() {
@@ -52,62 +55,82 @@ function Reset() {
     state.origin_y = 0;
     state.width = 4.0;
     state.height = state.width * state.canvasHeight / state.canvasWidth;
-    state.resolution = 8;
-    state.first = true;
+
+    ReDraw();
 }
 
 function Smooth() {
     state.smooth = !state.smooth;
-    state.resolution = 8;
-    state.first = true;
+
+    ReDraw();
 }
 
 function Draw() {
 
-    // let start = (new Date()).getTime();
-
     let ctx = state.ctx;
+    let compute_units;
+    if('compute_units' in state) {
+        compute_units = state.compute_units;
+    } else {
+        compute_units = [];
+        state.compute_units = compute_units;
+    }
 
-    for(let i = 0; i < state.canvasWidth / state.resolution; i++) {
+    if(compute_units.length === 0) {
 
-        for(let j = 0; j < state.canvasHeight / state.resolution; j++) {
+        for(let j = 0; j < state.canvasHeight; j += START_SIZE) {
+            for(let i = 0; i < state.canvasWidth; i += START_SIZE) {
+                compute_units.push({
+                    'i': i,
+                    'j': j,
+                    'size': START_SIZE,
+                    'draw': true
+                });
+            }
+        }
+    }
 
-            // If this is the first rendering, or we're on an odd row or column, draw the point
-            if(state.first || 0 < (i & 0x1) || 0 < (j & 0x1)) {
+    for(let i = 0; i < ITERATIONS_PER_FRAME && 0 < compute_units.length; i++) {
 
-                // iterate or z as:
-                //      Z = Z^2 + C
-                // where
-                //      Z = a + bi
-                //      C = c + di
-                let a = 0;
-                let b = 0;
-                let c = state.origin_x - (state.width / 2) + (i * state.resolution * state.width / state.canvasWidth);
-                let d = state.origin_y - (state.height / 2) + (j * state.resolution * state.height / state.canvasHeight);
+        // Get the next compute unit
+        let cu = compute_units.shift();
 
-                let iterations = 0;
-                while((a*a) + (b*b) < 4 && iterations < 1000) {
+        if(cu.draw) {
 
+            // iterate or z as:
+            //      Z = Z^2 + C
+            // where
+            //      Z = a + bi
+            //      C = c + di
+            let a = 0;
+            let b = 0;
+            let c = state.origin_x - (state.width / 2) + (cu.i * state.width / state.canvasWidth);
+            let d = state.origin_y - (state.height / 2) + (cu.j * state.height / state.canvasHeight);
+
+            let iterations = 0;
+            while((a*a) + (b*b) < 4 && iterations < 1000) {
+
+                let n_a = a*a - b*b + c;
+                let n_b = 2*a*b + d;
+
+                a = n_a;
+                b = n_b;
+
+                iterations++;
+            }
+
+            // If smooth coloring is enabled then iterate a few more times to give a better result
+            if(state.smooth) {
+                for(let k = 0; k < 3; k++) {
                     let n_a = a*a - b*b + c;
                     let n_b = 2*a*b + d;
 
                     a = n_a;
                     b = n_b;
-
-                    iterations++;
                 }
+            }
 
-                // If smooth coloring is enabled then iterate a few more times to give a better result
-                if(state.smooth) {
-                    for(let k = 0; k < 3; k++) {
-                        let n_a = a*a - b*b + c;
-                        let n_b = 2*a*b + d;
-
-                        a = n_a;
-                        b = n_b;
-                    }
-                }
-
+            if(2 < cu.size) {
                 let color = '#000000';
                 if(iterations < 1000) {
                     let h = iterations;
@@ -116,25 +139,73 @@ function Draw() {
                     }
                     color = 'hsl(' + (180 + h * 360 / 32) + ', 50%, 50%)';
                 }
+
                 ctx.fillStyle = color;
-                ctx.fillRect(i * state.resolution, j * state.resolution, state.resolution, state.resolution);
+                ctx.fillRect(cu.i, cu.j, cu.size, cu.size);
+            } else {
+
+                let img_dat = state.img_dat;
+                let img_dat_raw = img_dat.data;
+                if(cu.size * cu.size * 4 < img_dat_raw.length) {
+                    img_dat = ctx.createImageData(cu.size, cu.size);
+                    state.img_dat = img_dat;
+                    img_dat_raw = img_dat.data;
+                }
+
+                let color = [0, 0, 0];
+                if(iterations < 1000) {
+                    let h = iterations;
+                    if(state.smooth) {
+                        h = iterations + 3 - (Math.log(Math.log(Math.sqrt(a*a + b*b)))/LOG_2);
+                    }
+                    color = hslToRgb(((180 + h * 360 / 32) % 360) / 360, 0.5, 0.5);
+                }
+
+                for(let i = 0; i < img_dat_raw.length; i += 4) {
+                    img_dat_raw[i + 0] = color[0];
+                    img_dat_raw[i + 1] = color[1];
+                    img_dat_raw[i + 2] = color[2];
+                    img_dat_raw[i + 3] = 255;
+                }
+                ctx.putImageData(img_dat, cu.i, cu.j);
             }
+        }
+
+        if(1 < cu.size) {
+            let new_size = cu.size / 2;
+            let new_i = cu.i + new_size;
+            let new_j = cu.j + new_size;
+            compute_units.push({
+                'i': cu.i,
+                'j': cu.j,
+                'size': new_size,
+                'draw': false
+            },
+            {
+                'i': cu.i,
+                'j': new_j,
+                'size': new_size,
+                'draw': true
+            },
+            {
+                'i': new_i,
+                'j': cu.j,
+                'size': new_size,
+                'draw': true
+            },
+            {
+                'i': new_i,
+                'j': new_j,
+                'size': new_size,
+                'draw': true
+            });
         }
     }
 
-    // let time = ((new Date()).getTime() - start) / 1000;
-    // let pixels = state.canvasWidth * state.canvasHeight / Math.pow(state.resolution, 2)
-    // console.log({
-    //     'time': time,
-    //     'pixels': pixels,
-    //     'per_second': pixels / time
-    // });
-
-    state.first = false;
-
-    if(1 < state.resolution) {
-        state.resolution /= 2;
+    if(0 < compute_units.length) {
         QueueDraw();
+    } else {
+        console.log("DONE COMPUTING");
     }
 
 }
@@ -155,8 +226,54 @@ function Zoom(e) {
         state.height *= 2;
     }
 
-    state.resolution = 8;
-    state.first = true;
+    ReDraw();
 
     QueueDraw();
+}
+
+function ReDraw() {
+
+    if(last_animation_request != 0) {
+        window.cancelAnimationFrame(last_animation_request);
+    }
+
+    state.compute_units = [];
+
+    state.img_dat = state.ctx.createImageData(2, 2);
+}
+
+/**
+ * Converts an HSL color value to RGB. Conversion formula
+ * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
+ * Assumes h, s, and l are contained in the set [0, 1] and
+ * returns r, g, and b in the set [0, 255].
+ *
+ * @param   {number}  h       The hue
+ * @param   {number}  s       The saturation
+ * @param   {number}  l       The lightness
+ * @return  {Array}           The RGB representation
+ */
+function hslToRgb(h, s, l){
+    var r, g, b;
+
+    if(s == 0){
+        r = g = b = l; // achromatic
+    }else{
+        var hue2rgb = function hue2rgb(p, q, t){
+            if(t < 0) t += 1;
+            if(t > 1) t -= 1;
+            if(t < 1/6) return p + (q - p) * 6 * t;
+            if(t < 1/2) return q;
+            if(t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+            return p;
+        }
+
+        var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        var p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+    }
+
+    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
 }
