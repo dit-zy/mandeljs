@@ -5,15 +5,21 @@ const ITERATIONS_PER_FRAME = 500;
 let state = {};
 let last_animation_request = 0;
 
-function Start() {
+function Start(fullscreen) {
 
     let mc_selector = $('#main_canvas');
     let width = mc_selector.width();
     let mc = mc_selector.get(0);
 
     // Set the canvas height based on the width
+    if(fullscreen === true) {
+        mc.height = mc_selector.height();
+    } else {
+        mc.height = width;
+    }
     mc.width = width;
-    mc.height = width;
+
+    state.fullscreen = fullscreen === true
 
     Reset();
     state.smooth = false;
@@ -29,6 +35,10 @@ function Start() {
         } else if(e.key === 's') {
             Smooth();
             QueueDraw();
+        } else if(e.key === 'v') {
+            Save();
+        } else if(e.key === 'V') {
+            SaveWhenDone();
         }
     };
 
@@ -68,6 +78,7 @@ function SaveWhenDone() {
     if('data_url' in state) {
         Save();
     } else {
+        alert("Will prompt you to save the image when it's done computing.");
         state.save_when_done = true;
     }
 }

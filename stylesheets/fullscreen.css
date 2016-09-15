@@ -1,0 +1,12 @@
+@import url("screen.css");
+@import url("non-screen.css") handheld;
+@import url("non-screen.css") only screen and (max-device-width:640px);
+
+#main_canvas {
+    height: 50%;
+    width: 100%;
+}
+
+a#fractal-download {
+    display: none;
+}
