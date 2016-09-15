@@ -35,6 +35,43 @@ function Start() {
     QueueDraw();
 }
 
+function Done() {
+
+    console.log("DONE COMPUTING");
+
+    $('#main_canvas').removeClass('computing');
+    $('#main_canvas').addClass('computation-complete');
+
+    let data_url = $('#main_canvas').get(0).toDataURL('image/png');
+    state.data_url = data_url;
+    if('save_when_done' in state && state.save_when_done) {
+        state.save_when_done = false;
+        Save();
+    }
+}
+
+function Save() {
+
+    let data_url;
+    if('data_url' in state) {
+        data_url = state.data_url;
+    } else {
+        data_url = $('#main_canvas').get(0).toDataURL('image/png');
+    }
+
+    let dl_anchor = $('#fractal-download').get(0);
+    dl_anchor.setAttribute('href', data_url);
+    dl_anchor.click();
+}
+
+function SaveWhenDone() {
+    if('data_url' in state) {
+        Save();
+    } else {
+        state.save_when_done = true;
+    }
+}
+
 function QueueDraw() {
     last_animation_request = window.requestAnimationFrame(Draw);
 }
@@ -205,7 +242,7 @@ function Draw() {
     if(0 < compute_units.length) {
         QueueDraw();
     } else {
-        console.log("DONE COMPUTING");
+        Done();
     }
 
 }
@@ -240,6 +277,12 @@ function ReDraw() {
     state.compute_units = [];
 
     state.img_dat = state.ctx.createImageData(2, 2);
+
+    state.save_when_done = false;
+    delete state.data_url;
+
+    $('#main_canvas').removeClass('computation-complete');
+    $('#main_canvas').addClass('computing');
 }
 
 /**

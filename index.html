@@ -48,14 +48,17 @@
 
 
       <section id="main_content">
-          <canvas id="main_canvas">
+          <canvas id="main_canvas" class="computing">
           </canvas>
           <div class="buttons-outer">
               <span class="buttons-inner">
                   <a class="btn" href="#" onclick="Reset(); QueueDraw();">Reset</a>
                   <a class="btn" href="#" onclick="Smooth(); QueueDraw();">Smooth</a>
+                  <a class="btn" href="#" onclick="Save()">Save Now</a>
+                  <a class="btn btn-long" href="#" onclick="SaveWhenDone()">Save When Done</a>
               </span>
           </div>
+          <a id="fractal-download" download="mandelbrot.png"></a>
       </section>
 
       <footer>

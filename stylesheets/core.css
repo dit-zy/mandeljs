@@ -6,9 +6,21 @@
     width: 100%;
 }
 
+.computing {
+    border-style: solid;
+    border-width: 4px;
+    border-color: #ed4613;
+}
+
+.computation-complete {
+    border-style: solid;
+    border-width: 4px;
+    border-color: #4ded13;
+}
+
 .buttons-outer {
     margin-top: -6px;
-    padding-top: 10px;
+    padding-top: 0px;
     text-align: center;
     width: 100%;
 }
@@ -26,13 +38,23 @@ span.buttons-inner .btn {
     font-size: 1.3em;
     font-weight: 800;
     height: 40px;
-    margin: 0px 5px;
+    margin: 10px 5px 0px 10px;
     padding-top: 10px;
     text-align: center;
     text-decoration: none;
     width: 160px;
 }
 
+span.buttons-inner .btn-long {
+    font-size: 1em;
+    height: 36px;
+    padding-top: 14px;
+}
+
 span.buttons-inner .btn:hover {
     background-position: 0px -50px;
+}
+
+a#fractal-download {
+    display: none;
 }
