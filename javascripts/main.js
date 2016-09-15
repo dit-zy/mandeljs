@@ -39,6 +39,14 @@ function Start(fullscreen) {
             Save();
         } else if(e.key === 'V') {
             SaveWhenDone();
+        } else if(e.key === '+') {
+            state.max_iters *= 10;
+            ReDraw();
+            QueueDraw();
+        } else if(e.key === '-') {
+            state.max_iters /= 10;
+            ReDraw();
+            QueueDraw();
         }
     };
 
@@ -104,6 +112,8 @@ function Reset() {
     state.width = 4.0;
     state.height = state.width * state.canvasHeight / state.canvasWidth;
 
+    state.max_iters = 10000;
+
     ReDraw();
 }
 
@@ -156,7 +166,7 @@ function Draw() {
             let d = state.origin_y - (state.height / 2) + (cu.j * state.height / state.canvasHeight);
 
             let iterations = 0;
-            while((a*a) + (b*b) < 4 && iterations < 1000) {
+            while((a*a) + (b*b) < 4 && iterations < state.max_iters) {
 
                 let n_a = a*a - b*b + c;
                 let n_b = 2*a*b + d;
@@ -180,7 +190,7 @@ function Draw() {
 
             if(2 < cu.size) {
                 let color = '#000000';
-                if(iterations < 1000) {
+                if(iterations < state.max_iters) {
                     let h = iterations;
                     if(state.smooth) {
                         h = iterations + 3 - (Math.log(Math.log(Math.sqrt(a*a + b*b)))/LOG_2);
@@ -201,7 +211,7 @@ function Draw() {
                 }
 
                 let color = [0, 0, 0];
-                if(iterations < 1000) {
+                if(iterations < state.max_iters) {
                     let h = iterations;
                     if(state.smooth) {
                         h = iterations + 3 - (Math.log(Math.log(Math.sqrt(a*a + b*b)))/LOG_2);
