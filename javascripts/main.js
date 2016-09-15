@@ -20,6 +20,7 @@ function Start(fullscreen) {
     mc.width = width;
 
     state.fullscreen = fullscreen === true
+    state.colors = 32;
 
     Reset();
     state.smooth = false;
@@ -45,6 +46,16 @@ function Start(fullscreen) {
             QueueDraw();
         } else if(e.key === '-') {
             state.max_iters /= 10;
+            ReDraw();
+            QueueDraw();
+        } else if(e.key === 'c') {
+            state.colors -= 4;
+            if(state.colors < 1) state.colors = 1;
+            ReDraw();
+            QueueDraw();
+        } else if(e.key === 'C') {
+            if(state.colors <= 1) state.colors = 0;
+            state.colors += 4;
             ReDraw();
             QueueDraw();
         }
@@ -195,7 +206,7 @@ function Draw() {
                     if(state.smooth) {
                         h = iterations + 3 - (Math.log(Math.log(Math.sqrt(a*a + b*b)))/LOG_2);
                     }
-                    color = 'hsl(' + (180 + h * 360 / 32) + ', 50%, 50%)';
+                    color = 'hsl(' + (180 + h * 360 / state.colors) + ', 50%, 50%)';
                 }
 
                 ctx.fillStyle = color;
@@ -216,7 +227,7 @@ function Draw() {
                     if(state.smooth) {
                         h = iterations + 3 - (Math.log(Math.log(Math.sqrt(a*a + b*b)))/LOG_2);
                     }
-                    color = hslToRgb(((180 + h * 360 / 32) % 360) / 360, 0.5, 0.5);
+                    color = hslToRgb(((180 + h * 360 / state.colors) % 360) / 360, 0.5, 0.5);
                 }
 
                 for(let i = 0; i < img_dat_raw.length; i += 4) {
