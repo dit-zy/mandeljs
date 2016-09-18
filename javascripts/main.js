@@ -33,11 +33,11 @@ let last_animation_request = 0;
 function Start(fullscreen) {
 
     let mc_selector = $('#main_canvas');
-    let width = mc_selector.width();
+    let width = Math.floor(mc_selector.width() / 2) * 2;
     let mc = mc_selector.get(0);
 
     if(fullscreen === true) {
-        mc.height = mc_selector.height();
+        mc.height = Math.floor(mc_selector.height() / 2) * 2;
     } else {
         // Set the canvas height based on the width
         mc.height = width;
@@ -240,8 +240,8 @@ function Draw() {
 
     if(c.i === 0 && c.j === 0) {
         state.t_ctx.fillStyle = 'rgba(255,255,255,255)';
-        state.t_ctx.fillRect(Math.floor(field_x + c.size), 0, 1, state.height);
-        state.t_ctx.fillRect(Math.floor(field_x - c.size), 0, 1, state.height);
+        state.t_ctx.fillRect(field_x + c.size, 0, 1, state.height);
+        state.t_ctx.fillRect(field_x - c.size, 0, 1, state.height);
     }
 
     for(let iterator = 0; iterator < ITERATIONS_PER_CHUNK; iterator++) {
@@ -262,10 +262,8 @@ function Draw() {
             c.j = 0;
 
             state.t_ctx.fillStyle = 'rgba(0,0,0,0)';
-            state.t_ctx.clearRect(Math.floor(field_x + (c.i + 1)*c.size), 0, 1, state.height);
-            state.t_ctx.clearRect(Math.floor(field_x - (c.i + 1)*c.size), 0, 1, state.height);
-            // state.t_ctx.fillRect(field_x + (c.i + 1)*c.size, 0, 1, state.height);
-            // state.t_ctx.fillRect(field_y - (c.i + 1)*c.size, 0, 1, state.height);
+            state.t_ctx.clearRect(field_x + (c.i + 1)*c.size, 0, 1, state.height);
+            state.t_ctx.clearRect(field_x - (c.i + 1)*c.size, 0, 1, state.height);
 
             c.i++;
             if(state.width < c.i * c.size * 2) {
@@ -280,8 +278,8 @@ function Draw() {
             }
 
             state.t_ctx.fillStyle = 'rgba(255,255,255,255)';
-            state.t_ctx.fillRect(Math.floor(field_x + (c.i + 1)*c.size), 0, 1, state.height);
-            state.t_ctx.fillRect(Math.floor(field_x - (c.i + 1)*c.size), 0, 1, state.height);
+            state.t_ctx.fillRect(field_x + (c.i + 1)*c.size, 0, 1, state.height);
+            state.t_ctx.fillRect(field_x - (c.i + 1)*c.size, 0, 1, state.height);
         }
     }
 
@@ -297,8 +295,6 @@ function ComputeEscape(c, d) {
     //      C = c + di
     let a = 0;
     let b = 0;
-    // let c = state.compute.origin_x - (state.compute.width / 2) + (x * state.compute.width / state.width);
-    // let d = state.compute.origin_y - (state.compute.height / 2) + (y * state.compute.height / state.height);
 
     let iterations = 0;
     while((a*a) + (b*b) < 4 && iterations < state.compute.max_iters) {
@@ -343,7 +339,7 @@ function RenderBlock(ctx, x, y, width, height, field_x, field_y, field_width, fi
     }
 
     ctx.fillStyle = color;
-    ctx.fillRect(Math.floor(field_x), Math.floor(field_y), size, size);
+    ctx.fillRect(field_x, field_y, size, size);
     // } else {
 
     //     let img_dat = state.img_dat;
