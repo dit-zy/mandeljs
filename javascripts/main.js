@@ -92,9 +92,9 @@ function KeyPress(e) {
         state.colors += 4;
         ReDraw();
     } else if(e.key === 'l') {
-        ShiftColors(4/360);
+        ShiftColors(4);
     } else if(e.key === 'h') {
-        ShiftColors(-4/360);
+        ShiftColors(-4);
     }
 }
 
@@ -181,6 +181,8 @@ function ShiftColors(angle) {
 
     state.color_shift += angle;
 
+    // angle = angle / 360;
+
     let rendering = state.ctx.getImageData(0, 0, state.width, state.height);
     let img_dat = rendering.data;
 
@@ -192,7 +194,8 @@ function ShiftColors(angle) {
         // alpha channel (p+3) is ignored
 
         let hsl = rgbToHsl(r, g, b);
-        let rgb = hslToRgb((hsl[0] + angle) % 1, hsl[1], hsl[2]);
+        // let rgb = hslToRgb((hsl[0] + angle) % 1, hsl[1], hsl[2]);
+        let rgb = hslToRgb(((hsl[0]*360 + angle) % 360)/360, hsl[1], hsl[2]);
 
         img_dat[p] = rgb[0];
         img_dat[p+1] = rgb[1];
@@ -233,7 +236,7 @@ function Draw() {
     let ctx = state.ctx;
     let c = state.compute;
 
-    // let start_time = (new Date()).getTime();
+    let start_time = (new Date()).getTime();
 
     let field_x = state.width / 2;
     let field_y = state.height / 2;
@@ -244,45 +247,52 @@ function Draw() {
         state.t_ctx.fillRect(field_x - c.size, 0, 1, state.height);
     }
 
-    for(let iterator = 0; iterator < ITERATIONS_PER_CHUNK; iterator++) {
+    let current_time = start_time;
+    let num_rounds = 0;
+    while(((new Date()).getTime() - start_time) < 50) {
 
-        let x1 = field_x + c.i * c.size;
-        let x2 = field_x - (c.i+1) * c.size;
-        let y = c.j * c.size;
+        for(let iterator = 0; iterator < ITERATIONS_PER_CHUNK; iterator++) {
 
-        let shared_condition = c.size === START_SIZE || (0 < (c.j & 0x1));
-        if(shared_condition || (c.i & 0x1) === 1) {
-            RenderBlock(ctx, c.origin_x, c.origin_y, c.width, c.height, x1, y, state.width, state.height, c.size);
-        }
-        if(shared_condition || (c.i & 0x1) === 0) {
-            RenderBlock(ctx, c.origin_x, c.origin_y, c.width, c.height, x2, y, state.width, state.height, c.size);
-        }
+            let x1 = field_x + c.i * c.size;
+            let x2 = field_x - (c.i+1) * c.size;
+            let y = c.j * c.size;
 
-        c.j++;
-        if(state.height < c.j * c.size) {
-
-            c.j = 0;
-
-            state.t_ctx.fillStyle = 'rgba(0,0,0,0)';
-            state.t_ctx.clearRect(field_x + (c.i + 1)*c.size, 0, 1, state.height);
-            state.t_ctx.clearRect(field_x - (c.i + 1)*c.size, 0, 1, state.height);
-
-            c.i++;
-            if(state.width < c.i * c.size * 2) {
-
-                if(c.size === 1) {
-                    Done();
-                    return;
-                }
-
-                c.size /= 2;
-                c.i = 0;
+            let shared_condition = c.size === START_SIZE || (0 < (c.j & 0x1));
+            if(shared_condition || (c.i & 0x1) === 1) {
+                RenderBlock(ctx, c.origin_x, c.origin_y, c.width, c.height, x1, y, state.width, state.height, c.size);
+            }
+            if(shared_condition || (c.i & 0x1) === 0) {
+                RenderBlock(ctx, c.origin_x, c.origin_y, c.width, c.height, x2, y, state.width, state.height, c.size);
             }
 
-            state.t_ctx.fillStyle = 'rgba(255,255,255,255)';
-            state.t_ctx.fillRect(field_x + (c.i + 1)*c.size, 0, 1, state.height);
-            state.t_ctx.fillRect(field_x - (c.i + 1)*c.size, 0, 1, state.height);
+            c.j++;
+            if(state.height < c.j * c.size) {
+
+                c.j = 0;
+
+                state.t_ctx.fillStyle = 'rgba(0,0,0,0)';
+                state.t_ctx.clearRect(field_x + (c.i + 1)*c.size, 0, 1, state.height);
+                state.t_ctx.clearRect(field_x - (c.i + 1)*c.size, 0, 1, state.height);
+
+                c.i++;
+                if(state.width < c.i * c.size * 2) {
+
+                    if(c.size === 1) {
+                        Done();
+                        return;
+                    }
+
+                    c.size /= 2;
+                    c.i = 0;
+                }
+
+                state.t_ctx.fillStyle = 'rgba(255,255,255,255)';
+                state.t_ctx.fillRect(field_x + (c.i + 1)*c.size, 0, 1, state.height);
+                state.t_ctx.fillRect(field_x - (c.i + 1)*c.size, 0, 1, state.height);
+            }
         }
+
+        num_rounds++;
     }
 
     QueueDraw();
@@ -337,7 +347,7 @@ function RenderBlock(ctx, x, y, width, height, field_x, field_y, field_width, fi
 
     let color = '#000000';
     if(iterations < state.compute.max_iters) {
-        color = 'hsl(' + (180 + 360*(state.color_shift + iterations/state.colors)) + ', 50%, 50%)';
+        color = 'hsl(' + (180 + state.color_shift + 360*iterations/state.colors) + ', 50%, 50%)';
     }
 
     ctx.fillStyle = color;
