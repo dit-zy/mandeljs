@@ -250,9 +250,11 @@ function Draw() {
         let x2 = field_x - (c.i+1) * c.size;
         let y = c.j * c.size;
 
-        if(c.size === START_SIZE || (0 < c.i & 0x1) || (0 < c.j & 0x1)) {
-
+        let shared_condition = c.size === START_SIZE || (0 < (c.j & 0x1));
+        if(shared_condition || (c.i & 0x1) === 1) {
             RenderBlock(ctx, c.origin_x, c.origin_y, c.width, c.height, x1, y, state.width, state.height, c.size);
+        }
+        if(shared_condition || (c.i & 0x1) === 0) {
             RenderBlock(ctx, c.origin_x, c.origin_y, c.width, c.height, x2, y, state.width, state.height, c.size);
         }
 
