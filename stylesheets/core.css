@@ -2,20 +2,24 @@
 @import url("non-screen.css") handheld;
 @import url("non-screen.css") only screen and (max-device-width:640px);
 
-#main_canvas {
+#canvas-outer {
+    border: 0px;
+    position: relative;
+    margin: 0px;
+    padding: 0px;
     width: 100%;
 }
 
-.computing {
-    border-style: solid;
-    border-width: 4px;
-    border-color: #ed4613;
+#main_canvas {
+    width: 100%;
+    z-index: 0;
 }
 
-.computation-complete {
-    border-style: solid;
-    border-width: 4px;
-    border-color: #4ded13;
+#tracer_canvas {
+    left: 0px;
+    position: absolute;
+    top: 0px;
+    z-index: 1;
 }
 
 .buttons-outer {

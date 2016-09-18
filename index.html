@@ -48,8 +48,12 @@
 
 
       <section id="main_content">
-          <canvas id="main_canvas" class="computing">
-          </canvas>
+          <div id="canvas-outer">
+              <canvas id="main_canvas" class="computing">
+              </canvas>
+              <canvas id="tracer_canvas">
+              </canvas>
+          </div>
           <div class="buttons-outer">
               <span class="buttons-inner">
                   <a class="btn" href="#" onclick="Reset(); QueueDraw();">Reset</a>

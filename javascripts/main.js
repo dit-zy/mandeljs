@@ -1,8 +1,33 @@
 const LOG_2 = Math.log(2);
-const START_SIZE = 64;
-const ITERATIONS_PER_FRAME = 500;
+const START_SIZE = 32;
+const ITERATIONS_PER_CHUNK = 100;
 
-let state = {};
+let state = {
+    ctx: null,
+    t_ctx: null,
+
+    width: 0,
+    height: 0,
+
+    smooth: false,
+    colors: 32,
+    color_shift: 0,
+
+    data_url: null,
+    save_when_done: false,
+
+    compute: {
+        i: 0,
+        j: 0,
+        size: 0,
+        max_iters: 0,
+        origin_x: 0,
+        origin_y: 0,
+        width: 0,
+        height: 0,
+    },
+};
+
 let last_animation_request = 0;
 
 function Start(fullscreen) {
@@ -11,69 +36,76 @@ function Start(fullscreen) {
     let width = mc_selector.width();
     let mc = mc_selector.get(0);
 
-    // Set the canvas height based on the width
     if(fullscreen === true) {
         mc.height = mc_selector.height();
     } else {
+        // Set the canvas height based on the width
         mc.height = width;
     }
     mc.width = width;
 
-    state.fullscreen = fullscreen === true
-    state.colors = 32;
+    let tc_selector = $('#tracer_canvas');
+    let tc = tc_selector.get(0);
+    tc.width = mc.width;
+    tc.height = mc.height;
+
+    state.width = mc.width;
+    state.height = mc.height;
+
+    state.ctx = mc.getContext('2d');
+    state.t_ctx = tc.getContext('2d');
+
+    // mc_selector.click(Zoom);
+    tc_selector.click(Zoom);
+    tc_selector.contextmenu(Zoom);
+
+    window.onkeypress = KeyPress;
 
     Reset();
-    state.smooth = false;
 
-    // console.log(state);
+    ReDraw();
+}
 
-    mc_selector.click(Zoom);
+function KeyPress(e) {
 
-    window.onkeypress = function (e) {
-        if(e.key === 'r') {
-            Reset();
-            QueueDraw();
-        } else if(e.key === 's') {
-            Smooth();
-            QueueDraw();
-        } else if(e.key === 'v') {
-            Save();
-        } else if(e.key === 'V') {
-            SaveWhenDone();
-        } else if(e.key === '+') {
-            state.max_iters *= 10;
-            ReDraw();
-            QueueDraw();
-        } else if(e.key === '-') {
-            state.max_iters /= 10;
-            ReDraw();
-            QueueDraw();
-        } else if(e.key === 'c') {
-            state.colors -= 4;
-            if(state.colors < 1) state.colors = 1;
-            ReDraw();
-            QueueDraw();
-        } else if(e.key === 'C') {
-            if(state.colors <= 1) state.colors = 0;
-            state.colors += 4;
-            ReDraw();
-            QueueDraw();
-        }
-    };
-
-    QueueDraw();
+    if(e.key === 'r') {
+        Reset();
+        ReDraw();
+    } else if(e.key === 's') {
+        Smooth();
+    } else if(e.key === 'v') {
+        Save();
+    } else if(e.key === 'V') {
+        SaveWhenDone();
+    } else if(e.key === '+') {
+        state.compute.max_iters *= 10;
+        ReDraw();
+    } else if(e.key === '-') {
+        state.compute.max_iters /= 10;
+        ReDraw();
+    } else if(e.key === 'j') {
+        state.colors -= 4;
+        if(state.colors < 1) state.colors = 1;
+        ReDraw();
+    } else if(e.key === 'k') {
+        if(state.colors <= 1) state.colors = 0;
+        state.colors += 4;
+        ReDraw();
+    } else if(e.key === 'l') {
+        ShiftColors(4/360);
+    } else if(e.key === 'h') {
+        ShiftColors(-4/360);
+    }
 }
 
 function Done() {
 
     console.log("DONE COMPUTING");
 
-    $('#main_canvas').removeClass('computing');
-    $('#main_canvas').addClass('computation-complete');
+    last_animation_request = 0;
 
-    let data_url = $('#main_canvas').get(0).toDataURL('image/png');
-    state.data_url = data_url;
-    if('save_when_done' in state && state.save_when_done) {
+    state.data_url = $('#main_canvas').get(0).toDataURL('image/png');
+    if(state.save_when_done) {
         state.save_when_done = false;
         Save();
     }
@@ -94,7 +126,7 @@ function Save() {
 }
 
 function SaveWhenDone() {
-    if('data_url' in state) {
+    if(state.data_url != null) {
         Save();
     } else {
         alert("Will prompt you to save the image when it's done computing.");
@@ -110,173 +142,18 @@ function Reset() {
 
     let mc = $('#main_canvas').get(0);
 
-    state.canvasWidth = mc.width;
-    state.canvasHeight = mc.height;
+    state.compute.origin_x = 0;
+    state.compute.origin_y = 0;
+    state.compute.max_iters = 10000;
+    state.compute.height = 4.0
+    state.compute.width = state.compute.height * state.width / state.height;
 
-    state.ctx = mc.getContext('2d');
-
-    state.ctx.fillStyle = '#000000';
-    state.ctx.fillRect(0, 0, state.canvasWidth, state.canvasHeight);
-
-    state.origin_x = 0;
-    state.origin_y = 0;
-    state.width = 4.0;
-    state.height = state.width * state.canvasHeight / state.canvasWidth;
-
-    state.max_iters = 10000;
-
-    ReDraw();
+    state.data_url = null;
 }
 
 function Smooth() {
     state.smooth = !state.smooth;
-
     ReDraw();
-}
-
-function Draw() {
-
-    let ctx = state.ctx;
-    let compute_units;
-    if('compute_units' in state) {
-        compute_units = state.compute_units;
-    } else {
-        compute_units = [];
-        state.compute_units = compute_units;
-    }
-
-    if(compute_units.length === 0) {
-
-        for(let j = 0; j < state.canvasHeight; j += START_SIZE) {
-            for(let i = 0; i < state.canvasWidth; i += START_SIZE) {
-                compute_units.push({
-                    'i': i,
-                    'j': j,
-                    'size': START_SIZE,
-                    'draw': true
-                });
-            }
-        }
-    }
-
-    for(let i = 0; i < ITERATIONS_PER_FRAME && 0 < compute_units.length; i++) {
-
-        // Get the next compute unit
-        let cu = compute_units.shift();
-
-        if(cu.draw) {
-
-            // iterate or z as:
-            //      Z = Z^2 + C
-            // where
-            //      Z = a + bi
-            //      C = c + di
-            let a = 0;
-            let b = 0;
-            let c = state.origin_x - (state.width / 2) + (cu.i * state.width / state.canvasWidth);
-            let d = state.origin_y - (state.height / 2) + (cu.j * state.height / state.canvasHeight);
-
-            let iterations = 0;
-            while((a*a) + (b*b) < 4 && iterations < state.max_iters) {
-
-                let n_a = a*a - b*b + c;
-                let n_b = 2*a*b + d;
-
-                a = n_a;
-                b = n_b;
-
-                iterations++;
-            }
-
-            // If smooth coloring is enabled then iterate a few more times to give a better result
-            if(state.smooth) {
-                for(let k = 0; k < 3; k++) {
-                    let n_a = a*a - b*b + c;
-                    let n_b = 2*a*b + d;
-
-                    a = n_a;
-                    b = n_b;
-                }
-            }
-
-            if(2 < cu.size) {
-                let color = '#000000';
-                if(iterations < state.max_iters) {
-                    let h = iterations;
-                    if(state.smooth) {
-                        h = iterations + 3 - (Math.log(Math.log(Math.sqrt(a*a + b*b)))/LOG_2);
-                    }
-                    color = 'hsl(' + (180 + h * 360 / state.colors) + ', 50%, 50%)';
-                }
-
-                ctx.fillStyle = color;
-                ctx.fillRect(cu.i, cu.j, cu.size, cu.size);
-            } else {
-
-                let img_dat = state.img_dat;
-                let img_dat_raw = img_dat.data;
-                if(cu.size * cu.size * 4 < img_dat_raw.length) {
-                    img_dat = ctx.createImageData(cu.size, cu.size);
-                    state.img_dat = img_dat;
-                    img_dat_raw = img_dat.data;
-                }
-
-                let color = [0, 0, 0];
-                if(iterations < state.max_iters) {
-                    let h = iterations;
-                    if(state.smooth) {
-                        h = iterations + 3 - (Math.log(Math.log(Math.sqrt(a*a + b*b)))/LOG_2);
-                    }
-                    color = hslToRgb(((180 + h * 360 / state.colors) % 360) / 360, 0.5, 0.5);
-                }
-
-                for(let i = 0; i < img_dat_raw.length; i += 4) {
-                    img_dat_raw[i + 0] = color[0];
-                    img_dat_raw[i + 1] = color[1];
-                    img_dat_raw[i + 2] = color[2];
-                    img_dat_raw[i + 3] = 255;
-                }
-                ctx.putImageData(img_dat, cu.i, cu.j);
-            }
-        }
-
-        if(1 < cu.size) {
-            let new_size = cu.size / 2;
-            let new_i = cu.i + new_size;
-            let new_j = cu.j + new_size;
-            compute_units.push({
-                'i': cu.i,
-                'j': cu.j,
-                'size': new_size,
-                'draw': false
-            },
-            {
-                'i': cu.i,
-                'j': new_j,
-                'size': new_size,
-                'draw': true
-            },
-            {
-                'i': new_i,
-                'j': cu.j,
-                'size': new_size,
-                'draw': true
-            },
-            {
-                'i': new_i,
-                'j': new_j,
-                'size': new_size,
-                'draw': true
-            });
-        }
-    }
-
-    if(0 < compute_units.length) {
-        QueueDraw();
-    } else {
-        Done();
-    }
-
 }
 
 function Zoom(e) {
@@ -284,20 +161,45 @@ function Zoom(e) {
     let i = e.offsetX;
     let j = e.offsetY;
 
-    state.origin_x = state.origin_x + ((i - (state.canvasWidth / 2)) * state.width / state.canvasWidth);
-    state.origin_y = state.origin_y + ((j - (state.canvasHeight / 2)) * state.height / state.canvasHeight);
+    state.compute.origin_x = state.compute.origin_x + ((i - (state.width / 2)) * state.compute.width / state.width);
+    state.compute.origin_y = state.compute.origin_y + ((j - (state.height / 2)) * state.compute.height / state.height);
 
     if(e.button === 0) {
-        state.width /= 2;
-        state.height /= 2;
-    } else if(e.button === 1) {
-        state.width *= 2;
-        state.height *= 2;
+        state.compute.width /= 2;
+        state.compute.height /= 2;
+    } else if(e.button === 2) {
+        state.compute.width *= 2;
+        state.compute.height *= 2;
     }
 
     ReDraw();
 
-    QueueDraw();
+    return false;
+}
+
+function ShiftColors(angle) {
+
+    state.color_shift += angle;
+
+    let rendering = state.ctx.getImageData(0, 0, state.width, state.height);
+    let img_dat = rendering.data;
+
+    let r,g,b;
+    for(let p = 0; p < img_dat.length; p+=4) {
+        r = img_dat[p]
+        g = img_dat[p+1];
+        b = img_dat[p+2];
+        // alpha channel (p+3) is ignored
+
+        let hsl = rgbToHsl(r, g, b);
+        let rgb = hslToRgb((hsl[0] + angle) % 1, hsl[1], hsl[2]);
+
+        img_dat[p] = rgb[0];
+        img_dat[p+1] = rgb[1];
+        img_dat[p+2] = rgb[2];
+    }
+
+    state.ctx.putImageData(rendering,0,0);
 }
 
 function ReDraw() {
@@ -306,18 +208,174 @@ function ReDraw() {
         window.cancelAnimationFrame(last_animation_request);
     }
 
-    state.compute_units = [];
+    // state.img_dat = state.ctx.createImageData(2, 2);
 
-    state.img_dat = state.ctx.createImageData(2, 2);
-
+    state.data_url = null;
     state.save_when_done = false;
-    delete state.data_url;
 
-    $('#main_canvas').removeClass('computation-complete');
-    $('#main_canvas').addClass('computing');
+    state.compute.i = 0;
+    state.compute.j = 0;
+    state.compute.size = START_SIZE;
+
+    state.ctx.fillStyle = '#000000';
+    state.ctx.fillRect(0, 0, state.width, state.height);
+    state.t_ctx.clearRect(0, 0, state.width, state.height);
+
+    QueueDraw();
+}
+
+function createMatrix(width, height){
+    return Array(height).map(column => Array(width));
+}
+
+function Draw() {
+
+    let ctx = state.ctx;
+    let c = state.compute;
+
+    // let start_time = (new Date()).getTime();
+
+    let field_x = state.width / 2;
+    let field_y = state.height / 2;
+
+    if(c.i === 0 && c.j === 0) {
+        state.t_ctx.fillStyle = 'rgba(255,255,255,255)';
+        state.t_ctx.fillRect(Math.floor(field_x + c.size), 0, 1, state.height);
+        state.t_ctx.fillRect(Math.floor(field_x - c.size), 0, 1, state.height);
+    }
+
+    for(let iterator = 0; iterator < ITERATIONS_PER_CHUNK; iterator++) {
+
+        let x1 = field_x + c.i * c.size;
+        let x2 = field_x - (c.i+1) * c.size;
+        let y = c.j * c.size;
+
+        if(c.size === START_SIZE || (0 < c.i & 0x1) || (0 < c.j & 0x1)) {
+
+            RenderBlock(ctx, c.origin_x, c.origin_y, c.width, c.height, x1, y, state.width, state.height, c.size);
+            RenderBlock(ctx, c.origin_x, c.origin_y, c.width, c.height, x2, y, state.width, state.height, c.size);
+        }
+
+        c.j++;
+        if(state.height < c.j * c.size) {
+
+            c.j = 0;
+
+            state.t_ctx.fillStyle = 'rgba(0,0,0,0)';
+            state.t_ctx.clearRect(Math.floor(field_x + (c.i + 1)*c.size), 0, 1, state.height);
+            state.t_ctx.clearRect(Math.floor(field_x - (c.i + 1)*c.size), 0, 1, state.height);
+            // state.t_ctx.fillRect(field_x + (c.i + 1)*c.size, 0, 1, state.height);
+            // state.t_ctx.fillRect(field_y - (c.i + 1)*c.size, 0, 1, state.height);
+
+            c.i++;
+            if(state.width < c.i * c.size * 2) {
+
+                if(c.size === 1) {
+                    Done();
+                    return;
+                }
+
+                c.size /= 2;
+                c.i = 0;
+            }
+
+            state.t_ctx.fillStyle = 'rgba(255,255,255,255)';
+            state.t_ctx.fillRect(Math.floor(field_x + (c.i + 1)*c.size), 0, 1, state.height);
+            state.t_ctx.fillRect(Math.floor(field_x - (c.i + 1)*c.size), 0, 1, state.height);
+        }
+    }
+
+    QueueDraw();
+}
+
+function ComputeEscape(c, d) {
+
+    // iterate or z as:
+    //      Z = Z^2 + C
+    // where
+    //      Z = a + bi
+    //      C = c + di
+    let a = 0;
+    let b = 0;
+    // let c = state.compute.origin_x - (state.compute.width / 2) + (x * state.compute.width / state.width);
+    // let d = state.compute.origin_y - (state.compute.height / 2) + (y * state.compute.height / state.height);
+
+    let iterations = 0;
+    while((a*a) + (b*b) < 4 && iterations < state.compute.max_iters) {
+
+        let n_a = a*a - b*b + c;
+        let n_b = 2*a*b + d;
+
+        a = n_a;
+        b = n_b;
+
+        iterations++;
+    }
+
+    // If smooth coloring is enabled then iterate a few more times to give a better color result
+    if(state.smooth) {
+        for(let k = 0; k < 3; k++) {
+            let n_a = a*a - b*b + c;
+            let n_b = 2*a*b + d;
+
+            a = n_a;
+            b = n_b;
+        }
+
+        if(iterations < state.compute.max_iters) {
+            iterations = iterations + 3 - (Math.log(Math.log(Math.sqrt(a*a + b*b)))/LOG_2);
+        }
+    }
+
+    return iterations;
+}
+
+function RenderBlock(ctx, x, y, width, height, field_x, field_y, field_width, field_height, size) {
+
+    let iterations = ComputeEscape(
+            x + width*(field_x/field_width - 0.5),
+            y + height*(field_y/field_height - 0.5)
+        );
+
+    let color = '#000000';
+    if(iterations < state.compute.max_iters) {
+        color = 'hsl(' + (180 + 360*(state.color_shift + iterations/state.colors)) + ', 50%, 50%)';
+    }
+
+    ctx.fillStyle = color;
+    ctx.fillRect(Math.floor(field_x), Math.floor(field_y), size, size);
+    // } else {
+
+    //     let img_dat = state.img_dat;
+    //     let img_dat_raw = img_dat.data;
+    //     if(cu.size * cu.size * 4 < img_dat_raw.length) {
+    //         img_dat = ctx.createImageData(cu.size, cu.size);
+    //         state.img_dat = img_dat;
+    //         img_dat_raw = img_dat.data;
+    //     }
+
+    //     let color = [0, 0, 0];
+    //     if(iterations < state.max_iters) {
+    //         let h = iterations;
+    //         if(state.smooth) {
+    //             h = iterations + 3 - (Math.log(Math.log(Math.sqrt(a*a + b*b)))/LOG_2);
+    //         }
+    //         color = hslToRgb(((180 + h * 360 / state.colors) % 360) / 360, 0.5, 0.5);
+    //     }
+
+    //     for(let i = 0; i < img_dat_raw.length; i += 4) {
+    //         img_dat_raw[i + 0] = color[0];
+    //         img_dat_raw[i + 1] = color[1];
+    //         img_dat_raw[i + 2] = color[2];
+    //         img_dat_raw[i + 3] = 255;
+    //     }
+    //     ctx.putImageData(img_dat, cu.i, cu.j);
+    // }
 }
 
 /**
+ * Gotten from: http://stackoverflow.com/a/9493060
+ *
  * Converts an HSL color value to RGB. Conversion formula
  * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
  * Assumes h, s, and l are contained in the set [0, 1] and
@@ -351,4 +409,38 @@ function hslToRgb(h, s, l){
     }
 
     return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+}
+
+/**
+ * Gotten from: http://stackoverflow.com/a/9493060
+ *
+ * Converts an RGB color value to HSL. Conversion formula
+ * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
+ * Assumes r, g, and b are contained in the set [0, 255] and
+ * returns h, s, and l in the set [0, 1].
+ *
+ * @param   {number}  r       The red color value
+ * @param   {number}  g       The green color value
+ * @param   {number}  b       The blue color value
+ * @return  {Array}           The HSL representation
+ */
+function rgbToHsl(r, g, b){
+    r /= 255, g /= 255, b /= 255;
+    var max = Math.max(r, g, b), min = Math.min(r, g, b);
+    var h, s, l = (max + min) / 2;
+
+    if(max == min){
+        h = s = 0; // achromatic
+    }else{
+        var d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch(max){
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+    }
+
+    return [h, s, l];
 }
