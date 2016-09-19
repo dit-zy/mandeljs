@@ -40,7 +40,7 @@ function Start(fullscreen) {
         mc.height(Math.floor(mc.height() / 2) * 2);
     } else {
         // Set the canvas height based on the width
-        mc.height(width);
+        mc.height(mc.width());
     }
     mc_elem.width = mc.width();
     mc_elem.height = mc.height();
