@@ -32,37 +32,42 @@ let last_animation_request = 0;
 
 function Start(fullscreen) {
 
-    let mc_selector = $('#main_canvas');
-    let width = Math.floor(mc_selector.width() / 2) * 2;
-    let mc = mc_selector.get(0);
+    let mc = $('#main_canvas');
+    let mc_elem = mc.get(0);
 
+    mc.width(Math.floor(mc.width() / 2) * 2);
     if(fullscreen === true) {
-        mc.height = Math.floor(mc_selector.height() / 2) * 2;
+        mc.height(Math.floor(mc.height() / 2) * 2);
     } else {
         // Set the canvas height based on the width
-        mc.height = width;
+        mc.height(width);
     }
-    mc.width = width;
+    mc_elem.width = mc.width();
+    mc_elem.height = mc.height();
 
-    let tc_selector = $('#tracer_canvas');
-    let tc = tc_selector.get(0);
-    tc.width = mc.width;
-    tc.height = mc.height;
+    state.width = mc.width();
+    state.height = mc.height();
 
-    state.width = mc.width;
-    state.height = mc.height;
+    let tc = $('#tracer_canvas');
+    let tc_elem = tc.get(0);
+    tc.width(mc.width());
+    tc.height(mc.height());
+    tc_elem.width = tc.width();
+    tc_elem.height = tc.height();
 
-    state.ctx = mc.getContext('2d');
-    state.t_ctx = tc.getContext('2d');
+    let mouse_canvas = $('#mouse_canvas');
+    let mouse_canvas_elem = mouse_canvas.get(0);
+    mouse_canvas_elem.width = mc.width;
+    mouse_canvas_elem.height = mc.height;
 
-    // mc_selector.click(Zoom);
-    tc_selector.click(Zoom);
-    tc_selector.contextmenu(Zoom);
-
+    tc.click(Zoom);
+    tc.contextmenu(Zoom);
     window.onkeypress = KeyPress;
 
-    Reset();
+    state.ctx = mc_elem.getContext('2d');
+    state.t_ctx = tc_elem.getContext('2d');
 
+    Reset();
     ReDraw();
 }
 
