@@ -161,15 +161,25 @@ function Zoom(e) {
     let i = e.offsetX;
     let j = e.offsetY;
 
-    state.compute.origin_x = state.compute.origin_x + ((i - (state.width / 2)) * state.compute.width / state.width);
-    state.compute.origin_y = state.compute.origin_y + ((j - (state.height / 2)) * state.compute.height / state.height);
+    let x = state.compute.width*(i/state.width - 0.5);
+    let y = state.compute.height*(j/state.height - 0.5);
+    state.compute.origin_x += x;
+    state.compute.origin_y += y;
 
-    if(e.button === 0) {
-        state.compute.width /= 2;
-        state.compute.height /= 2;
-    } else if(e.button === 2) {
-        state.compute.width *= 2;
-        state.compute.height *= 2;
+    if(!e.shiftKey) {
+        if(e.button === 0) {
+            state.compute.width /= 2;
+            state.compute.height /= 2;
+        } else if(e.button === 2) {
+            state.compute.width *= 2;
+            state.compute.height *= 2;
+        }
+
+        let x_prime = state.compute.width*(i/state.width - 0.5);
+        let y_prime = state.compute.height*(j/state.height - 0.5);
+
+        state.compute.origin_x -= x_prime;
+        state.compute.origin_y -= y_prime;
     }
 
     ReDraw();
