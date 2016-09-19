@@ -55,11 +55,6 @@ function Start(fullscreen) {
     tc_elem.width = tc.width();
     tc_elem.height = tc.height();
 
-    let mouse_canvas = $('#mouse_canvas');
-    let mouse_canvas_elem = mouse_canvas.get(0);
-    mouse_canvas_elem.width = mc.width;
-    mouse_canvas_elem.height = mc.height;
-
     tc.click(Zoom);
     tc.contextmenu(Zoom);
     window.onkeypress = KeyPress;
