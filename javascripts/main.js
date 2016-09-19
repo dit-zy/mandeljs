@@ -308,6 +308,46 @@ function Draw() {
     QueueDraw();
 }
 
+function ComputeEscapeBig(c, d) {
+
+    // iterate or z as:
+    //      Z = Z^2 + C
+    // where
+    //      Z = a + bi
+    //      C = c + di
+    let a = Big(0);
+    let b = Big(0);
+
+    let iterations = 0;
+    while(a.times(a).plus(b.times(b)).lt(4) && iterations < state.compute.max_iters) {
+
+        let n_a = a.times(a).mines(b.times(b)).plus(c);
+        let n_b = a.times(b).times(2).plus(d);
+
+        a = n_a;
+        b = n_b;
+
+        iterations++;
+    }
+
+    // If smooth coloring is enabled then iterate a few more times to give a better color result
+    // if(state.smooth) {
+    //     for(let k = 0; k < 3; k++) {
+    //         let n_a = a*a - b*b + c;
+    //         let n_b = 2*a*b + d;
+
+    //         a = n_a;
+    //         b = n_b;
+    //     }
+
+    //     if(iterations < state.compute.max_iters) {
+    //         iterations = iterations + 3 - (Math.log(Math.log(Math.sqrt(a*a + b*b)))/LOG_2);
+    //     }
+    // }
+
+    return iterations;
+}
+
 function ComputeEscape(c, d) {
 
     // iterate or z as:
@@ -350,7 +390,7 @@ function ComputeEscape(c, d) {
 
 function RenderBlock(ctx, x, y, width, height, field_x, field_y, field_width, field_height, size) {
 
-    let iterations = ComputeEscape(
+    let iterations = ComputeEscapeBig(
             x + width*(field_x/field_width - 0.5),
             y + height*(field_y/field_height - 0.5)
         );
