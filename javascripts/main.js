@@ -5,6 +5,7 @@ const ITERATIONS_PER_CHUNK = 100;
 let state = {
     ctx: null,
     t_ctx: null,
+    m_ctx: null,
 
     width: 0,
     height: 0,
@@ -55,12 +56,19 @@ function Start(fullscreen) {
     tc_elem.width = tc.width();
     tc_elem.height = tc.height();
 
-    tc.click(Zoom);
-    tc.contextmenu(Zoom);
+    let mouse_canvas = $('#mouse_canvas');
+    let mouse_canvas_elem = mouse_canvas.get(0);
+    mouse_canvas_elem.width = mc.width;
+    mouse_canvas_elem.height = mc.height;
+
+    mouse_canvas.click(Zoom);
+    mouse_canvas.contextmenu(Zoom);
+    // mouse_canvas.mousemove(MoveMouse);
     window.onkeypress = KeyPress;
 
     state.ctx = mc_elem.getContext('2d');
     state.t_ctx = tc_elem.getContext('2d');
+    state.m_ctx = mouse_canvas_elem.getContext('2d');
 
     Reset();
     ReDraw();
@@ -96,6 +104,22 @@ function KeyPress(e) {
     } else if(e.key === 'h') {
         ShiftColors(-4);
     }
+}
+
+function MoveMouse(e) {
+
+    if(e.shiftKey) {
+        return false;
+    }
+
+    let i = e.offsetX;
+    let j = e.offsetY;
+
+    state.m_ctx.clearRect(0, 0, state.width, state.height);
+    state.m_ctx.strokeStyle = "#e09814";
+    state.m_ctx.strokeRect(i/2, j/2, state.width/2, state.height/2);
+
+    return false;
 }
 
 function Done() {

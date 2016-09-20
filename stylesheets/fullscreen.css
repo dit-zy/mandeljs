@@ -14,14 +14,21 @@
 #main_canvas {
     width: 100%;
     height: 100%;
-    z-index: 0;
+    z-index: -1;
 }
 
-#tracer_canvas {
+.overlay {
     left: 0px;
     position: absolute;
     top: 0px;
+}
+
+#tracer_canvas {
     z-index: 1;
+}
+
+#mouse_canvas {
+    z-index: 2;
 }
 
 a#fractal-download {
